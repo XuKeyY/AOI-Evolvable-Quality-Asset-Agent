@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+data/
+*.pyc
+.env
+config.json
+config.json.*.bak
+*.log
+*.pth
+*.pt
+*.onnx
+*.om
+dist/

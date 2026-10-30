@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><title>AOI 累计反馈与模型进化</title>
+<style>body{font:16px system-ui;max-width:1150px;margin:28px auto;padding:0 20px;background:#f4f7fa;color:#172538}section{background:white;padding:22px;margin:18px 0;border-radius:12px}button,input,select{padding:8px;margin:5px;max-width:90%}button{cursor:pointer}label{display:block;margin:8px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#eef2f6;padding:14px;max-height:450px;overflow:auto}table{border-collapse:collapse;width:100%;font-size:14px}td,th{padding:8px;border-bottom:1px solid #ddd;text-align:left;overflow-wrap:anywhere}img{width:90px;max-height:80px;object-fit:contain}small{color:#506071}.row{display:flex;flex-wrap:wrap;gap:10px}.notice{border-left:4px solid #4284d6;padding:10px;background:#edf5ff}#message:not(:empty){position:sticky;top:8px;z-index:10;padding:12px;background:#edf5ff;border:1px solid #4284d6;border-radius:8px}#adaptFeedback:not(:empty){padding:12px;background:#edf5ff;white-space:pre-wrap}#jobLog{max-height:300px}#jobSummary{white-space:pre-wrap}</style>
+<h1>AOI 累计反馈与模型进化</h1><p class="notice">初始 100 正常＋30 缺陷 → 独立验证 → 发布。后续使用原始支持集与累计有效人工反馈生成候选模型，通过回归门槛后发布。当前发布门槛：平衡准确率 ≥ 80%，FPR/FNR ≤ 20%。</p>
+<p id="health"></p><p id="message" role="status"></p>
+<section><h2>任务与操作者</h2><div class="row"><input id="name" placeholder="产品 / 工序 / 检测部位"><button id="create">创建任务</button><select id="tasks"></select><input id="operator" placeholder="操作者姓名或编号"></div><p id="counts"></p><p id="current"></p><small>操作者用于审计记录；当前开发版没有账号身份认证。</small></section>
+<section id="jobPanel"><h2>作业状态、日志与结果</h2><select id="jobHistory" aria-label="当前任务的历史作业"></select><input id="job" placeholder="作业 ID"><button id="query">查询状态</button><p id="jobSummary" role="status" aria-live="polite">尚未提交作业</p><details open><summary>最新算法日志</summary><pre id="jobLog">尚无算法日志</pre></details><a id="csv" hidden>下载原始检测 CSV</a><details><summary>完整作业记录与操作结果</summary><pre id="output">等待操作</pre></details></section>
+<section><h2>1. 初始支持集与独立验证集</h2>
+<label>原始正常图片 <input id="normal" type="file" accept=".png,.jpg,.jpeg,.bmp,.webp,.tif,.tiff" multiple aria-label="多选图片"><input id="normal_folder" type="file" webkitdirectory directory multiple hidden><button type="button" data-folder="normal">选择文件夹</button><small id="normal_selection" aria-live="polite">尚未选择图片</small><button data-upload="normal">登记正常支持集</button></label>
+<label>原始缺陷图片 <input id="defect" type="file" accept=".png,.jpg,.jpeg,.bmp,.webp,.tif,.tiff" multiple aria-label="多选图片"><input id="defect_folder" type="file" webkitdirectory directory multiple hidden><button type="button" data-folder="defect">选择文件夹</button><small id="defect_selection" aria-live="polite">尚未选择图片</small><button data-upload="defect">登记缺陷支持集</button></label>
+<label>独立验证正常图片 <input id="validation_normal" type="file" accept=".png,.jpg,.jpeg,.bmp,.webp,.tif,.tiff" multiple aria-label="多选图片"><input id="validation_normal_folder" type="file" webkitdirectory directory multiple hidden><button type="button" data-folder="validation_normal">选择文件夹</button><small id="validation_normal_selection" aria-live="polite">尚未选择图片</small><button data-upload="validation_normal">登记验证正常集</button></label>
+<label>独立验证缺陷图片 <input id="validation_defect" type="file" accept=".png,.jpg,.jpeg,.bmp,.webp,.tif,.tiff" multiple aria-label="多选图片"><input id="validation_defect_folder" type="file" webkitdirectory directory multiple hidden><button type="button" data-folder="validation_defect">选择文件夹</button><small id="validation_defect_selection" aria-live="polite">尚未选择图片</small><button data-upload="validation_defect">登记验证缺陷集</button></label>
+<p>可多选图片，或点击“选择文件夹”批量读取文件夹及子文件夹中的图片。分别选择对应的 normal / defect 文件夹，选择后再点击登记按钮；请勿选择包含全部实验分组的目录。初始支持集需要正常 100 张、缺陷 30 张。</p><p>验证图片不参与训练，首次验证后固定。默认两类各至少 5 张。</p><button id="adapt">提交初始正式适配</button><p id="adaptFeedback" role="status" aria-live="polite">先创建任务并登记图片；仅选择文件或文件夹还没有完成上传登记。</p>
+<label>原始图片标签修订 <input id="originalAsset" placeholder="原始支持图片 asset_id"><select id="originalLabel"><option value="normal">正常</option><option value="defect">缺陷</option></select><input id="originalNote" placeholder="纠正理由"><button id="correct">保存标签修订</button><button id="labelHistory">查看修订历史</button></label>
+</section>
+<section><h2>2. 候选验证、发布与回滚</h2><select id="models"></select><button id="validate">验证候选并比较父模型</button><button id="publish">发布通过验证的候选</button><div><select id="rollbackModel"></select><button id="rollback">回滚到历史发布版本</button><button id="releases">发布历史</button></div><p>适配成功不自动替换当前模型。验证未通过或父版本过期时保持旧版。</p></section>
+<section><h2>3. 选择检测模式</h2><select id="mode"><option value="review_test">人工复核测试</option><option value="machine_test">上机测试</option></select><input id="test" type="file" accept=".png,.jpg,.jpeg,.bmp,.webp,.tif,.tiff" multiple aria-label="多选图片"><input id="test_folder" type="file" webkitdirectory directory multiple hidden><button type="button" data-folder="test">选择文件夹</button><small id="test_selection" aria-live="polite">尚未选择图片</small><button id="inspect">使用当前发布模型检测</button><p>两种模式保存并同步原机器结果。只有人工复核模式允许确认正常、缺陷或无法判断；机器预测不能直接用于训练。</p></section>
+<section><h2 id="recordsTitle">人工复核记录</h2><button id="reloadRecords">刷新检测记录</button><div style="overflow:auto"><table><thead><tr><th>图片 / 资产</th><th>原机器判定</th><th>分数 / 阈值</th><th>模型 / 模式</th><th>人工结论</th></tr></thead><tbody id="records"></tbody></table></div></section>
+<section><h2>4. 累计反馈进化</h2><button id="preview">查看本轮累计训练快照</button><button id="evolve">提交正式进化适配</button><p>使用原始 130 张的最新确认标签，加上累计有效反馈；去重、排除冲突及验证集图片。候选固定父模型与反馈截止点，保留正式训练配置。</p></section>
+<section><h2>云端同步</h2><button id="syncList">查询同步队列</button><input id="syncId" placeholder="同步事件 ID"><button id="retrySync">重试该事件</button><p>云端未配置时显示 pending_configuration。同步成功必须收到匹配事件 ID 的确认；人工结论与原检测记录关联，失败可重试。</p></section>
+
+<section><h2>5. 多模态资产、证据与质量图谱</h2>
+<p>上传 PDF、Word、文本、CSV、Excel 或图片。系统生成统一资产 ID，并保留页码、工作表/行号或段落号作为证据位置。</p>
+<label>行业资产 <input id="knowledgeFiles" type="file" accept=".pdf,.docx,.txt,.md,.csv,.xlsx,.png,.jpg,.jpeg,.bmp,.webp,.tif,.tiff" multiple><button id="uploadKnowledge">上传并解析</button></label>
+<textarea id="knowledgeAssets" rows="3" style="width:95%" placeholder="已上传的 asset_id，每行一个"></textarea>
+<div class="row"><input id="evidenceQuery" value="批次 异常 标准 处理措施" placeholder="证据检索词"><button id="searchEvidence">检索证据</button><button id="queryGraph">跨文档图谱推理</button></div>
+<p>本体更新实行“候选→人工审核→发布”。系统不会把抽取结果自动写入已发布本体。</p>
+<div class="row"><input id="ontologyRationale" value="新增质量规范与标准映射" placeholder="变更依据"><button id="proposeOntology">提出本体变更</button><input id="proposalId" placeholder="proposal_id"><button id="approveOntology">批准候选</button><button id="publishOntology">发布本体版本</button></div>
+</section>
+
+<script>
+const $=id=>document.getElementById(id);let timer;let tasks=[];let modelList=[];
+function show(x){$('output').textContent=JSON.stringify(x,null,2)}
+function error(e){$('message').textContent=e.message;show({error:e.message})}
+async function request(path,body){const r=await fetch(path,body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await r.json();if(!r.ok)throw Error(typeof data.detail==='string'?data.detail:JSON.stringify(data.detail));return data}
+function action(fn){return async e=>{const b=e.currentTarget;b.disabled=true;const pending='正在处理：'+b.textContent;$('message').textContent=pending;try{await fn();if($('message').textContent===pending)$('message').textContent='已完成：'+b.textContent}catch(e){error(e);if(b.id==='adapt')$('adaptFeedback').textContent='未提交：'+e.message}finally{b.disabled=false}}}
+function task(){if(!$('tasks').value)throw Error('请先在上方填写产品名称并点击“创建任务”，再登记正常和缺陷图片');return $('tasks').value}
+function operator(){const value=$('operator').value.trim();if(!value)throw Error('请填写操作者');return value}
+const selectedUploads=new Map();
+const uploadedAssets=new WeakMap();
+let uploadInProgress=false;
+const imageExtension=/\.(png|jpe?g|bmp|webp|tiff?)$/i;
+function selectImages(id,input){
+    const all=Array.from(input.files);
+    const files=all.filter(file=>imageExtension.test(file.name));
+    files.sort((a,b)=>(a.webkitRelativePath||a.name).localeCompare(b.webkitRelativePath||b.name));
+    selectedUploads.set(id,files);
+    const ignored=all.length-files.length;
+    const folder=input.id.endsWith('_folder');
+    $(folder?id:id+'_folder').value='';
+    $(id+'_selection').textContent='已选择 '+files.length+' 张图片'+(ignored?'，忽略 '+ignored+' 个非图片文件':'')+(folder?'（含子文件夹）':'');
+}
+function clearSelection(id){
+    selectedUploads.delete(id);$(id).value='';$(id+'_folder').value='';
+    $(id+'_selection').textContent='尚未选择图片';
+}
+async function withUploadLock(fn){
+    if(uploadInProgress)throw Error('请等待当前批量上传完成');
+    uploadInProgress=true;
+    const controls=Array.from(document.querySelectorAll('button,input,select'));
+    const states=controls.map(control=>control.disabled);
+    controls.forEach(control=>control.disabled=true);
+    try{return await fn()}finally{controls.forEach((control,i)=>control.disabled=states[i]);uploadInProgress=false}
+}
+async function uploadFiles(id){
+    const files=selectedUploads.get(id)||Array.from($(id).files).filter(file=>imageExtension.test(file.name));
+    if(!files.length)throw Error('请选择图片或图片文件夹');
+    const ids=[];
+    for(let i=0;i<files.length;i++){
+        const file=files[i];
+        $('message').textContent='上传 '+(i+1)+' / '+files.length+'：'+(file.webkitRelativePath||file.name);
+        let asset=uploadedAssets.get(file);
+        if(!asset){
+            try{
+                const form=new FormData();form.append('file',file,file.name);
+                const r=await fetch('/assets/upload',{method:'POST',body:form});
+                const a=await r.json();
+                if(!r.ok)throw Error(typeof a.detail==='string'?a.detail:JSON.stringify(a.detail));
+                asset=a.asset_id;uploadedAssets.set(file,asset);
+            }catch(e){throw Error('第 '+(i+1)+' / '+files.length+' 张 '+file.name+' 上传失败：'+e.message+'。修复后可直接重试，已成功上传的图片将复用。')}
+        }
+        ids.push(asset);
+    }
+    return ids;
+}
+for(const id of ['normal','defect','validation_normal','validation_defect','test']){
+    $(id).onchange=()=>selectImages(id,$(id));
+    $(id+'_folder').onchange=()=>selectImages(id,$(id+'_folder'));
+}
+for(const button of document.querySelectorAll('[data-folder]')){
+    button.onclick=()=>{
+        const input=$(button.dataset.folder+'_folder');
+        if(!('webkitdirectory' in input)){error(Error('当前浏览器不支持文件夹选择，请使用 Chrome / Edge，或在文件选择框中按 Ctrl+A 多选图片'));return}
+        input.click();
+    };
+}
+
+function taskLabel(t){const support=t.normal.length+t.defect.length;const validation=t.validation_normal.length+t.validation_defect.length;return t.name+' · 支持 '+support+' · 验证 '+validation+' · '+t.task_id.slice(-8)}
+async function refresh(){const old=$('tasks').value||remember('aoi_task');tasks=await request('/tasks');$('tasks').replaceChildren();for(const t of tasks)$('tasks').add(new Option(taskLabel(t),t.task_id));if(tasks.some(t=>t.task_id===old))$('tasks').value=old;if(!tasks.length){$('counts').textContent='尚未创建任务，尚无已登记图片';$('message').textContent='请先填写产品名称并点击“创建任务”，再上传登记初始 100 张正常和 30 张缺陷图片'}await detail()}
+async function detail(){if(!$('tasks').value)return;remember('aoi_task',task());const t=await request('/tasks/'+task());$('counts').textContent='初始正常 '+t.normal.length+'/100，缺陷 '+t.defect.length+'/30；验证正常 '+t.validation_normal.length+'，缺陷 '+t.validation_defect.length+'；数据修订 '+t.revision;$('current').textContent='当前发布模型：'+(t.published_model||'未发布');modelList=(await request('/models')).filter(m=>m.task_id===task()&&m.status!=='legacy_incompatible');$('models').replaceChildren();for(const m of modelList)$('models').add(new Option(m.model_version+' · '+m.status,m.model_version));const releases=await request('/tasks/'+task()+'/releases');$('rollbackModel').replaceChildren();for(const v of [...new Set(releases.map(r=>r.to_model))])if(v!==t.published_model)$('rollbackModel').add(new Option(v,v));await renderRecords();await restoreJobs()}
+function model(){const m=$('models').value;if(!m)throw Error('请先生成候选模型');return m}
+function remember(key,value){try{if(value!==undefined)localStorage.setItem(key,value);return localStorage.getItem(key)}catch(e){return null}}
+const jobStatuses={queued:'排队中',running:'运行中',succeeded:'已完成',failed:'失败'};
+function renderJob(j){
+    show(j);
+    const start=j.started_at||j.created_at;
+    const elapsed=start?Math.max(0,Math.round((Date.parse(j.finished_at||new Date().toISOString())-Date.parse(start))/1000)):0;
+    const lines=['状态：'+(jobStatuses[j.status]||j.status)+'；阶段：'+j.stage,'作业 ID：'+j.job_id,'数据集版本：'+(j.dataset_version||'—'),'候选 / 检测模型版本：'+(j.model_version||'—'),'耗时：'+elapsed+' 秒'];
+    if(j.training_counts)lines.push('训练样本：正常 '+j.training_counts.normal+'，缺陷 '+j.training_counts.defect);
+    if(j.comparison)lines.push('comparison.passed：'+j.comparison.passed+'（仅通过后才可发布）');
+    if(j.error)lines.push('错误：'+j.error);
+    if(j.status==='succeeded'&&j.kind==='adapt')lines.push('下一步：选择此候选，点击“验证候选并比较父模型”。适配完成尚未发布。');
+    $('jobSummary').textContent=lines.join('\n');
+    $('jobLog').textContent=j.log_tail||(j.status==='queued'?'作业正在排队，尚未开始写日志。':j.status==='running'?'算法正在运行，尚无日志输出；每 3 秒自动查询状态。':'暂无算法日志');
+    $('csv').hidden=!(j.kind==='inspect'&&j.status==='succeeded');
+    $('csv').href='/jobs/'+j.job_id+'/predictions.csv';
+    if(j.kind==='adapt'&&j.adaptation_type==='initial')$('adaptFeedback').textContent=lines.join('\n');
+}
+async function restoreJobs(){
+    const selectedTask=task();
+    const jobs=(await request('/jobs')).filter(j=>j.task_id===selectedTask).sort((a,b)=>b.created_at.localeCompare(a.created_at));
+    $('jobHistory').replaceChildren();
+    for(const j of jobs)$('jobHistory').add(new Option((jobStatuses[j.status]||j.status)+' · '+j.kind+' · '+j.job_id,j.job_id));
+    if(!jobs.length){clearInterval(timer);timer=null;$('job').value='';$('jobSummary').textContent='当前任务尚未提交作业';$('jobLog').textContent='尚无算法日志';$('csv').hidden=true;return}
+    const active=jobs.find(j=>['queued','running'].includes(j.status));
+    const remembered=remember('aoi_job_'+selectedTask);
+    const chosen=active||jobs.find(j=>j.job_id===remembered)||jobs[0];
+    $('job').value=chosen.job_id;$('jobHistory').value=chosen.job_id;
+    const current=await request('/jobs/'+chosen.job_id);
+    if(task()!==selectedTask)return;
+    renderJob(current);clearInterval(timer);timer=null;
+    if(['queued','running'].includes(current.status))timer=setInterval(()=>poll().catch(error),3000);
+}
+function watch(j){
+    clearInterval(timer);$('job').value=j.job_id;remember('aoi_job_'+j.task_id,j.job_id);renderJob(j);
+    $('message').textContent='已提交 '+j.job_id+'；下方作业面板每 3 秒更新状态和日志';
+    $('jobPanel').scrollIntoView({behavior:'smooth',block:'start'});
+    timer=setInterval(()=>poll().catch(error),3000);poll().catch(error);
+}
+async function poll(){
+    const id=$('job').value.trim();if(!id)throw Error('请先提交作业，或填写已有作业 ID');
+    const j=await request('/jobs/'+id);if($('job').value.trim()!==id)return;
+    remember('aoi_job_'+j.task_id,id);renderJob(j);
+    if(['succeeded','failed'].includes(j.status)){
+        clearInterval(timer);timer=null;
+        $('message').textContent=j.status==='failed'?'作业失败：'+j.error:'作业已完成：'+j.job_id;
+        await detail();
+    }
+}
+
+function text(parent,value){const node=document.createElement('div');node.textContent=value;parent.append(node)}
+async function renderRecords(){const mode=$('mode').value;$('recordsTitle').textContent=mode==='review_test'?'人工复核记录':'上机检测记录（不产生学习反馈）';const records=await request('/inspection-records?task_id='+encodeURIComponent(task()));$('records').replaceChildren();for(const r of records.filter(r=>r.mode===mode)){const tr=document.createElement('tr');const cells=Array.from({length:5},()=>document.createElement('td'));for(const c of cells)tr.append(c);const image=document.createElement('img');image.src='/assets/'+r.asset_id+'/image';image.alt='检测原图';cells[0].append(image);text(cells[0],r.asset_id);text(cells[1],r.result);text(cells[2],r.final_score+' / '+r.threshold);text(cells[3],r.model_version);text(cells[3],r.mode);if(r.mode==='review_test'){const select=document.createElement('select');select.add(new Option('正常','normal'));select.add(new Option('缺陷','defect'));select.add(new Option('无法判断','uncertain'));const note=document.createElement('input');note.placeholder='复核备注';const save=document.createElement('button');save.textContent='保存人工结论';save.onclick=action(async()=>{show(await request('/inspection-records/'+r.record_id+'/reviews',{label:select.value,operator:operator(),note:note.value}));await renderRecords()});const history=document.createElement('button');history.textContent='复核历史';history.onclick=action(async()=>show(await request('/inspection-records/'+r.record_id+'/reviews')));cells[4].append(select,note,save,history);const reviews=await request('/inspection-records/'+r.record_id+'/reviews');if(reviews.length)text(cells[4],'最新确认：'+reviews[0].label)}else{text(cells[4],'仅保存机器记录，不开放复核')} $('records').append(tr)}}
+$('create').onclick=action(async()=>{const name=$('name').value.trim();if(!name)throw Error('请填写任务名称');const existing=tasks.filter(t=>t.name===name);if(existing.length){const t=[...existing].sort((a,b)=>(b.normal.length+b.defect.length+b.validation_normal.length+b.validation_defect.length)-(a.normal.length+a.defect.length+a.validation_normal.length+a.validation_defect.length))[0];$('tasks').value=t.task_id;await detail();show(t);$('message').textContent='已选择同名已有任务：'+taskLabel(t)+'。如需新任务，请使用不同名称。';return}const t=await request('/tasks',{name});await refresh();$('tasks').value=t.task_id;await detail();show(t);$('message').textContent='任务创建成功：'+taskLabel(t)});
+$('tasks').onchange=()=>{clearInterval(timer);timer=null;detail().catch(error)};$('mode').onchange=()=>renderRecords().catch(error);
+for(const b of document.querySelectorAll('[data-upload]'))b.onclick=action(()=>withUploadLock(async()=>{const id=task();const role=b.dataset.upload;const ids=await uploadFiles(role);show(await request('/tasks/'+id+'/assets',{role,asset_ids:ids}));clearSelection(role);$('message').textContent='已完成 '+ids.length+' 张图片的数据登记';await detail()}));
+$('adapt').onclick=action(async()=>{
+    const id=task();$('adaptFeedback').textContent='正在核对已登记的支持集…';
+    const t=await request('/tasks/'+id);
+    if(t.normal.length!==100||t.defect.length!==30)throw Error('已登记正常 '+t.normal.length+'/100、缺陷 '+t.defect.length+'/30。选择文件夹后，还需要分别点击“登记正常支持集”和“登记缺陷支持集”，等待登记完成后再提交。');
+    $('adaptFeedback').textContent='正在提交正式适配，请等待返回作业 ID…';
+    watch(await request('/tasks/'+id+'/adaptations',{development:false}));
+});
+$('correct').onclick=action(async()=>show(await request('/tasks/'+task()+'/label-revisions',{asset_id:$('originalAsset').value.trim(),label:$('originalLabel').value,operator:operator(),note:$('originalNote').value})));
+$('labelHistory').onclick=action(async()=>show(await request('/tasks/'+task()+'/label-revisions')));
+$('validate').onclick=action(async()=>watch(await request('/models/'+model()+'/validations',{})));
+$('publish').onclick=action(async()=>{const t=await request('/tasks/'+task());show(await request('/tasks/'+task()+'/publications',{model_version:model(),operator:operator(),expected_current:t.published_model}));await detail()});
+$('rollback').onclick=action(async()=>{const t=await request('/tasks/'+task());if(!$('rollbackModel').value)throw Error('没有可回滚版本');show(await request('/tasks/'+task()+'/rollbacks',{model_version:$('rollbackModel').value,operator:operator(),expected_current:t.published_model}));await detail()});
+$('releases').onclick=action(async()=>show(await request('/tasks/'+task()+'/releases')));
+$('inspect').onclick=action(()=>withUploadLock(async()=>{const id=task();const t=await request('/tasks/'+id);if(!t.published_model)throw Error('请先验证并发布模型');const mode=$('mode').value;const ids=await uploadFiles('test');const job=await request('/inspections',{task_id:id,model_version:t.published_model,mode,asset_ids:ids});clearSelection('test');watch(job)}));
+$('reloadRecords').onclick=action(renderRecords);$('preview').onclick=action(async()=>show(await request('/tasks/'+task()+'/training-preview')));
+$('evolve').onclick=action(async()=>watch(await request('/tasks/'+task()+'/evolutions',{})));
+$('syncList').onclick=action(async()=>show(await request('/sync-events')));$('retrySync').onclick=action(async()=>show(await request('/sync-events/'+$('syncId').value.trim()+'/retry',{})));
+$('jobHistory').onchange=()=>{clearInterval(timer);timer=null;$('job').value=$('jobHistory').value;remember('aoi_job_'+task(),$('job').value);poll().catch(error);if($('job').value)timer=setInterval(()=>poll().catch(error),3000)};
+function knowledgeIds(){return $('knowledgeAssets').value.split(/[\s,]+/).map(x=>x.trim()).filter(Boolean)}
+$('uploadKnowledge').onclick=action(async()=>{const files=Array.from($('knowledgeFiles').files);if(!files.length)throw Error('请选择需要登记的行业资产');const ids=knowledgeIds();for(let i=0;i<files.length;i++){const form=new FormData();form.append('file',files[i],files[i].name);$('message').textContent='上传并解析 '+(i+1)+' / '+files.length+'：'+files[i].name;const response=await fetch('/assets/upload',{method:'POST',body:form});const asset=await response.json();if(!response.ok)throw Error(asset.detail||'上传失败');ids.push(asset.asset_id);await request('/assets/'+asset.asset_id+'/parse',{});} $('knowledgeAssets').value=[...new Set(ids)].join('\n');$('knowledgeFiles').value='';show({status:'parsed',asset_ids:knowledgeIds()})});
+$('searchEvidence').onclick=action(async()=>show(await request('/evidence/search',{query:$('evidenceQuery').value,asset_ids:knowledgeIds(),limit:20})));
+$('queryGraph').onclick=action(async()=>show(await request('/quality-graph/query',{query:$('evidenceQuery').value,start_node_id:null,max_hops:3})));
+$('proposeOntology').onclick=action(async()=>{const result=await request('/ontology/proposals',{asset_ids:knowledgeIds(),rationale:$('ontologyRationale').value,changes:[]});$('proposalId').value=result.proposal_id;show(result)});
+$('approveOntology').onclick=action(async()=>show(await request('/ontology/proposals/'+$('proposalId').value.trim()+'/review',{decision:'approve',operator:operator(),note:'页面人工审核通过'})));
+$('publishOntology').onclick=action(async()=>show(await request('/ontology/proposals/'+$('proposalId').value.trim()+'/publish',{operator:operator()})));
+$('query').onclick=action(poll);request('/health').then(h=>{$('health').textContent='业务版本 '+h.version+'；云端'+(h.cloud_configured?'已配置':'未配置，事件保留在同步队列')}).catch(error);refresh().catch(error);
+</script></html>
+

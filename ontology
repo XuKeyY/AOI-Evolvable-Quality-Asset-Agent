@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "concepts": ["产品", "批次", "工序", "检验项", "检测记录", "异常", "人工复核", "标准条款", "处理措施", "文档"],
+  "relations": ["涉及", "依据", "属于批次", "发现异常", "建议措施", "来源于"],
+  "governance": {"proposal_required": true, "human_review_required": true, "published_versions_immutable": true}
+}
