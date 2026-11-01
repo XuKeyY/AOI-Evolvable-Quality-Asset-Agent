@@ -1,0 +1,169 @@
+AOI 质量资产智能体 · 非商业源码许可协议
+AOI Evolvable Quality Asset Agent · Noncommercial Source License
+版本 1.0（2026-11-01）
+
+Copyright (c) 2026 XuKeyY
+https://github.com/XuKeyY/AOI-Evolvable-Quality-Asset-Agent
+
+Required Notice: Copyright (c) 2026 XuKeyY (https://github.com/XuKeyY/AOI-Evolvable-Quality-Asset-Agent)
+
+────────────────────────────────────────────────────────
+一、定义
+────────────────────────────────────────────────────────
+
+1.1 「本作品」指本仓库中的源代码、脚本、配置、文档、图示，以及
+    作者随本仓库一并提供的其他原创内容。
+
+1.2 「衍生作品」指基于本作品全部或主要部分修改、翻译、改编、
+    组合或再创作形成的任何作品。
+
+1.3 「商业使用」指以直接或间接获取经济利益为目的的使用，包括
+    但不限于：用于商业产品或商业服务；用于企业生产经营环境；
+    用于对外交付的项目、外包或咨询；用于收费培训、付费课程；
+    用于以营利为目的的产品演示或技术验证。
+
+1.4 「竞赛」指任何形式的比赛、评奖、评比、招标、黑客松、创新
+    大赛及类似的对外评比活动，无论该活动本身是否具有商业性质。
+
+1.5 「作者」指上述版权持有人。
+
+────────────────────────────────────────────────────────
+二、授权范围
+────────────────────────────────────────────────────────
+
+在遵守本协议全部条款的前提下，作者授予你一项非独占、不可转让、
+可撤销的许可，允许你：
+
+2.1 阅读、下载、克隆本作品；
+
+2.2 为个人学习、研究、教学演示之目的使用、运行本作品；
+
+2.3 为个人学习与研究之目的修改本作品，形成衍生作品；
+
+2.4 在学术论文、技术报告或学习笔记中引用本作品，并注明来源。
+
+────────────────────────────────────────────────────────
+三、限制
+────────────────────────────────────────────────────────
+
+除第二条规定的情形外，未经作者事先书面许可，你不得：
+
+3.1 将本作品或衍生作品用于任何商业使用；
+
+3.2 将本作品或衍生作品（含其全部或主要部分）提交至任何竞赛，
+    或用于竞赛作品的开发、演示与答辩；
+
+3.3 对外分发、发布、转让、出售、出租本作品或衍生作品，包括
+    以发布修改版本、镜像仓库、打包分发等方式；
+
+3.4 将本作品或衍生作品用于对外提供的商业服务，包括以 SaaS、
+    API、在线演示等形式向第三方提供其功能；
+
+3.5 移除、遮蔽或篡改本作品中的版权声明、作者署名、许可标识
+    或本协议文本。
+
+说明：你在 GitHub 平台上对本仓库的查看与 fork，同时受 GitHub
+服务条款约束；本协议不限制平台本身提供的功能，但限制你对本作品
+内容的使用与对外分发。
+
+────────────────────────────────────────────────────────
+四、署名要求
+────────────────────────────────────────────────────────
+
+4.1 你依本协议使用、修改本作品时，须完整保留本文件、版权声明
+    与作者署名。
+
+4.2 你在论文、报告或演示中引用本作品时，须注明项目名称、作者
+    与仓库地址。
+
+4.3 衍生作品不得暗示作者为其背书，或将其表述为作者的官方版本。
+
+────────────────────────────────────────────────────────
+五、第三方内容
+────────────────────────────────────────────────────────
+
+5.1 本作品中如包含来自第三方的代码、模型、数据集、文档或图像，
+    其版权归各自权利人所有，遵循其原始许可，不在本协议授权范围
+    之内。
+
+5.2 第三方内容清单见 THIRD_PARTY_NOTICES.md。作者不对该部分
+    内容作出任何授权承诺。
+
+────────────────────────────────────────────────────────
+六、终止
+────────────────────────────────────────────────────────
+
+6.1 你违反本协议任一条款，依本协议获得的全部许可立即终止。
+
+6.2 作者以书面方式通知你存在违约行为后，若你在 30 日内完全纠正
+    违约状态并采取合理措施弥补既往影响，许可可恢复；否则许可
+    自始终止。
+
+6.3 许可终止后，你须立即停止使用本作品与衍生作品，并删除其
+    全部副本。
+
+────────────────────────────────────────────────────────
+七、免责声明与责任限制
+────────────────────────────────────────────────────────
+
+7.1 本作品按「现状」提供，不附带任何明示或默示的保证，包括但
+    不限于适销性、特定用途适用性、无侵权及无错误的保证。
+
+7.2 在适用法律允许的最大范围内，作者不对因使用或无法使用本
+    作品而产生的任何直接、间接、附带、特殊或后果性损失承担
+    责任，包括但不限于数据损失、业务中断与利润损失。
+
+────────────────────────────────────────────────────────
+八、其他
+────────────────────────────────────────────────────────
+
+8.1 本协议适用中华人民共和国法律（不含冲突规范）。
+
+8.2 本协议任一条款被认定无效或不可执行，不影响其余条款的效力。
+
+8.3 本协议以中文版本为准；下方英文译文仅供参考，与中文版本
+    存在歧义时以中文版本为准。
+
+────────────────────────────────────────────────────────
+English Translation (for reference only)
+────────────────────────────────────────────────────────
+
+Copyright (c) 2026 XuKeyY
+
+This is a source-available, NONCOMMERCIAL license. It is NOT an
+open source license.
+
+You may read, clone, run and modify this work solely for personal
+study, research, teaching demonstrations and academic citation,
+provided you keep this license, the copyright notice and the
+author's attribution intact.
+
+You may NOT, without the author's prior written permission:
+  (a) use this work or any derivative in any commercial context,
+      including commercial products or services, internal
+      production use, client delivery, consulting, or paid
+      training;
+  (b) submit this work or any derivative, in whole or in
+      substantial part, to any competition, award program, tender
+      or similar comparative event, or use it to develop,
+      demonstrate or defend a competition entry;
+  (c) distribute, publish, sublicense, sell or rent this work or
+      any derivative, including by publishing modified versions,
+      mirroring the repository or packaging it for others;
+  (d) offer this work's functionality to third parties as a
+      service, including via SaaS, API or hosted demos;
+  (e) remove or obscure any copyright notice, attribution or
+      this license text.
+
+Viewing and forking this repository on GitHub is additionally
+governed by GitHub's Terms of Service; this license does not
+restrict platform functionality, but does restrict your use and
+external distribution of the content.
+
+Third-party components remain under their original licenses and
+are not covered by this license. See THIRD_PARTY_NOTICES.md.
+
+THE WORK IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. TO
+THE MAXIMUM EXTENT PERMITTED BY LAW, THE AUTHOR SHALL NOT BE
+LIABLE FOR ANY DAMAGES ARISING FROM THE USE OF OR INABILITY TO
+USE THE WORK.
